@@ -1,0 +1,7 @@
+** compiled at:     Nov 24 2024 03:07:42
+** execution start: 2024-11-24 03:46:23:851253
+graph.cpp:initParameters:1512(3) opening config file 'rai.cfg'
+graph.cpp:initParameters:1519(3)  - failed
+graph.cpp:initParameters:1525(3) opening base config file '/home/monke/Xrai/robotic/rai/../local.cfg'
+graph.cpp:initParameters:1531(3)  - failed
+RenderData.cpp:glInitialize:105(-1) FreeType Error: Failed to load font 'ubuntu/Ubuntu-L.ttf' error code: 1 -> text rendering disabled

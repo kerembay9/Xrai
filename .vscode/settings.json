@@ -1,0 +1,6 @@
+{
+    "cmake.sourceDirectory": "/home/monke/Xrai/robotic",
+    "files.associations": {
+        "*.ipp": "cpp"
+    }
+}
