@@ -160,8 +160,11 @@ arr RRT_SingleTree::getNewSample(const arr& target, double stepsize, double p_si
 arr RRT_SingleTree::getPathFromNode(uint fromID) {
   arr path;
   uint node = fromID;
+  std::cout << "entered getPathFromNode" << std::endl;
+  std::cout << "parent" << parent << " fromID " << fromID << std::endl;
   for(;;) {
     path.append(ann.X[node]);
+    std::cout << "path append" << ann.X[node] << "node" << node << std::endl;
     if(!node) break;
     node = getParent(node);
   }
@@ -171,7 +174,7 @@ arr RRT_SingleTree::getPathFromNode(uint fromID) {
 
 arr RRT_SingleTree::getNeighbors(const arr& q, double radius) {
   arr neighbors; // Initialize an empty array for the neighbors
-  for (uint i = 0; i < ann.X.d0; ++i) {
+  for (uint i = 0; i < ann.X.d0 -1; ++i) {
     arr node = ann.X[i]; // Get the position of node i
 
     // Compute the Euclidean distance using the length function
@@ -183,11 +186,33 @@ arr RRT_SingleTree::getNeighbors(const arr& q, double radius) {
 }
 
 void RRT_SingleTree::changeParent(uint nodeID, uint newParentID, double newPathCost) {
-  std::cout << "node id: " << nodeID << " newParentID" << newParentID << "newPathCost" << newPathCost << std::endl;
-  // parent(nodeID) = newParentID;
-  // parent_cost(nodeID) = newPathCost;
-  // total_cost(nodeID) = total_cost(newParentID) + newPathCost;
+  // Validate indices
+  if (nodeID >= parent.N || newParentID >= parent.N) {
+    std::cerr << "Error: Invalid nodeID or newParentID. nodeID=" << nodeID 
+              << ", newParentID=" << newParentID 
+              << ", parent size=" << parent.N << std::endl;
+    return;
+  }
+
+  // Debug output
+  std::cout << "Changing parent of node " << nodeID 
+            << " to " << newParentID 
+            << " with path cost " << newPathCost << std::endl;
+  std::cout << "parent was " << parent << std::endl; 
+  // Update parent and costs
+  parent(nodeID) = newParentID;
+  parent_cost(nodeID) = newPathCost;
+  total_cost(nodeID) = total_cost(newParentID) + newPathCost;
+  std::cout << "parent is " << parent << std::endl; 
+
+  // Debug output to confirm changes
+  std::cout << "Updated parent array: ";
+  // for (size_t i = 0; i < parent.N; ++i) {
+  //   std::cout << parent(i) << " ";
+  // }
+  std::cout << std::endl;
 }
+
 
 //===========================================================================
 
@@ -512,7 +537,7 @@ bool RRT_Star_PathFinder::growTreeTowardsRandom(RRT_SingleTree& rrt) {
     rrt.add(q, parentID, qr); // Add new node to the tree
 
     // Rewiring: search for neighbors and potentially rewire them
-    double radius = 1.0; // Set a rewiring radius
+    double radius = stepsize; // Set a rewiring radius
     arr neighbors = rrt.getNeighbors(q, radius); // Get neighbors of the new node
     for (uint i = 0; i < neighbors.N; ++i) {
       uint neighborID = neighbors(i);
@@ -581,7 +606,7 @@ bool RRT_Star_PathFinder::growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& 
   P.collisionTolerance = org_collisionTolerance;
 
   //finally adding the new node to the tree
-  double radius = 0.3;
+  double radius = stepsize*2;
   if (qr->isFeasible) {
   uint newNodeID = rrt_A.add(q, parentID, qr); // Add the new node with its initial parent
   arr newNode = rrt_A.getNode(newNodeID);
@@ -600,18 +625,18 @@ bool RRT_Star_PathFinder::growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& 
     //   // Compute the cost of the current path and the potential rewired path
       double newPathCost = rrt_A.getCost(neighborID) + length(neighborNode - newNode);
       double currentPathCost = rrt_A.getCost(newNodeID);
-      // std::cout << "newPathCost is " << newPathCost << "currentPathCost is " << currentPathCost << std::endl;
+      std::cout << "newPathCost is " << newPathCost << "currentPathCost is " << currentPathCost << std::endl;
       if (newPathCost < currentPathCost) {
-        std::cout << "newPathCost is " << newPathCost << "currentPathCost is " << currentPathCost << std::endl;
+        std::cout << "found shorter path" << std::endl;
         // Rewire the neighbor if the new path is better
-        rrt_A.changeParent(neighborID, newNodeID, newPathCost);
+        rrt_A.changeParent(newNodeID, neighborID, newPathCost);
       }
     }
   }
-
-    double dist = rrt_B.getNearest(q);
-    if(subsampleChecks>0) { if(dist<stepsize/subsampleChecks) return true; }
-    else { if(dist<stepsize) return true; }
+  double dist = rrt_B.getNearest(q);
+  std::cout << "dist: " << dist << " stepsize/subsampleChecks: " << stepsize/subsampleChecks << std::endl;
+  if(subsampleChecks>0) { if(dist<stepsize/subsampleChecks) return true; }
+  else { if(dist<stepsize) return true; }
   }
   return false;
 }
@@ -700,24 +725,27 @@ int RRT_Star_PathFinder::stepConnect() {
   if(iters>(uint)maxIters) return -1;
 
   bool success = growTreeToTree(*rrt0, *rrtT);
+  std::cout << "success line 1: " << success << std::endl;
   if(!success) success = growTreeToTree(*rrtT, *rrt0);
 
+
   //animation display
-  if(verbose>2) {
-    if(!(iters%100)) {
-      DISP.setJointState(rrt0->getLast());
-      DISP.view(verbose>4, STRING("planConnect evals " <<P.evals));
-    }
-  }
-  if(verbose>1) {
-    if(!(iters%100)) {
-      std::cout <<"RRT queries=" <<P.evals <<" tree sizes = " <<rrt0->getNumberNodes()  <<' ' <<rrtT->getNumberNodes() <<std::endl;
-    }
-  }
+  // if(verbose>2) {
+  //   if(!(iters%100)) {
+  //     DISP.setJointState(rrt0->getLast());
+  //     DISP.view(verbose>4, STRING("planConnect evals " <<P.evals));
+  //   }
+  // }
+  // if(verbose>1) {
+  //   if(!(iters%100)) {
+  //     std::cout <<"RRT queries=" <<P.evals <<" tree sizes = " <<rrt0->getNumberNodes()  <<' ' <<rrtT->getNumberNodes() <<std::endl;
+  //   }
+  // }
 
   //-- the rest is only on success -> extract the path, display, etc
 
   if(success) {
+    std::cout << "execution completed" << std::endl;
     if(verbose>0) {
       std::cout <<"  -- rrt success:";
       std::cout <<" queries:" <<P.evals <<" tree sizes: " <<rrt0->getNumberNodes()  <<' ' <<rrtT->getNumberNodes() <<std::endl;
@@ -727,9 +755,11 @@ int RRT_Star_PathFinder::stepConnect() {
 //      std::cout <<"  sideSteps: " <<(100.*n_sideStepGood/n_sideStep) <<"%/" <<n_sideStep;
 //      std::cout <<std::endl;
     }
-
+    std::cout << "before path" << std::endl;
     path = rrt0->getPathFromNode(rrt0->nearestID);
+    std::cout << "after path" << std::endl;
     arr pathT = rrtT->getPathFromNode(rrtT->nearestID);
+    std::cout << "after pathT" << std::endl;
 
     revertPath(path);
     path.append(pathT);

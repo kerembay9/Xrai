@@ -7,8 +7,8 @@ cp _build_utils/CMakeLists-ubuntu.txt CMakeLists.txt
 export PY_VERSION=$(python3 -c "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}')")
 
 # Run cmake with the specified options and -O2 optimization
-cmake -DPY_VERSION=$PY_VERSION -DUSE_REALSENSE=ON -DUSE_LIBFRANKA=ON -DCMAKE_CXX_FLAGS="-O2" -DCMAKE_C_FLAGS="-O2" . -B build
-
+cmake -DPY_VERSION=$PY_VERSION -DUSE_REALSENSE=ON -DUSE_LIBFRANKA=ON  . -B build
+#-DCMAKE_CXX_FLAGS="-O2" -DCMAKE_C_FLAGS="-O2"
 # Build and install the _robotic component
 make -C build _robotic install
 
