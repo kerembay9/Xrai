@@ -1,7 +1,10 @@
-** compiled at:     Nov 24 2024 03:07:42
-** execution start: 2024-11-24 03:46:23:851253
+** compiled at:     Dec  8 2024 04:53:26
+** execution start: 2024-12-08 16:06:38:605924
 graph.cpp:initParameters:1512(3) opening config file 'rai.cfg'
 graph.cpp:initParameters:1519(3)  - failed
 graph.cpp:initParameters:1525(3) opening base config file '/home/monke/Xrai/robotic/rai/../local.cfg'
 graph.cpp:initParameters:1531(3)  - failed
-RenderData.cpp:glInitialize:105(-1) FreeType Error: Failed to load font 'ubuntu/Ubuntu-L.ttf' error code: 1 -> text rendering disabled
+util.cpp:cd_start:1034(3) entering path '/home/monke/Xrai'
+util.cpp:cd_file:1042(3) entering path '/home/monke/Xrai' from '/home/monke/Xrai'
+util.cpp:getIs:1071(3) opening input file 'maze.g'
+util.cpp:cd_start:1034(3) entering path '/home/monke/Xrai'
