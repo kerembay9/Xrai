@@ -606,13 +606,14 @@ bool RRT_Star_PathFinder::growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& 
   P.collisionTolerance = org_collisionTolerance;
 
   //finally adding the new node to the tree
-  double radius = stepsize*2;
+  double radius = 0.05;
   if (qr->isFeasible) {
   uint newNodeID = rrt_A.add(q, parentID, qr); // Add the new node with its initial parent
   arr newNode = rrt_A.getNode(newNodeID);
   std::cout << "adding " << newNodeID << std::endl;
   arr neighbors = rrt_A.getNeighbors(q, radius); // Get neighbors within the specified radius
   std::cout << "neighbors are " << neighbors << std::endl;
+  // find the parent from neighbors
   for (uint i = 0; i < neighbors.N; ++i) {
     uint neighborID = neighbors(i);
     arr neighborNode = rrt_A.getNode(neighborID);
@@ -620,7 +621,7 @@ bool RRT_Star_PathFinder::growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& 
     if (parentID == neighborID) {
       std::cout << "Invalid parentID: " << parentID << std::endl;
     } else {
-      arr parent = rrt_A.getNode(parentID);
+      // arr parent = rrt_A.getNode(parentID);
       std::cout << "parentID: " << parentID << std::endl;
     //   // Compute the cost of the current path and the potential rewired path
       double newPathCost = rrt_A.getCost(neighborID) + length(neighborNode - newNode);
@@ -630,6 +631,27 @@ bool RRT_Star_PathFinder::growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& 
         std::cout << "found shorter path" << std::endl;
         // Rewire the neighbor if the new path is better
         rrt_A.changeParent(newNodeID, neighborID, newPathCost);
+      }
+    }
+  }
+  // if possible, update neighbors' parents to new node
+  for (uint i = 0; i < neighbors.N; ++i) {
+    uint neighborID = neighbors(i);
+    arr neighborNode = rrt_A.getNode(neighborID);
+    std::cout << "neighborID " << neighborID << " neighborNode " << neighborNode << std::endl;
+    if (parentID == neighborID) {
+      std::cout << "Invalid parentID: " << parentID << std::endl;
+    } else {
+      // arr parent = rrt_A.getNode(parentID);
+      std::cout << "parentID: " << parentID << std::endl;
+    //   // Compute the cost of the current path and the potential rewired path
+      double newPathCost = rrt_A.getCost(newNodeID) + length(neighborNode - newNode);
+      double currentPathCost = rrt_A.getCost(neighborID);
+      std::cout << "newPathCost is " << newPathCost << "currentPathCost is " << currentPathCost << std::endl;
+      if (newPathCost < currentPathCost) {
+        std::cout << "found shorter path" << std::endl;
+        // Rewire the neighbor if the new path is better
+        rrt_A.changeParent(neighborID, newNodeID, newPathCost);
       }
     }
   }
@@ -722,7 +744,7 @@ void RRT_Star_PathFinder::planForward(const arr& q0, const arr& qT) {
 int RRT_Star_PathFinder::stepConnect() {
   std::cout << "entered stepConnect" << std::endl;
   iters++;
-  if(iters>(uint)maxIters) return -1;
+  if(iters>(uint)maxIters) return foundPath; //-1
 
   bool success = growTreeToTree(*rrt0, *rrtT);
   std::cout << "success line 1: " << success << std::endl;
@@ -778,8 +800,9 @@ int RRT_Star_PathFinder::stepConnect() {
         DISP.clear();
       }
     }
-
-    return 1;
+    std::cout << "viable path found" << std::endl;
+    foundPath = 1;
+    return 0; //1
   }
 
   return 0;

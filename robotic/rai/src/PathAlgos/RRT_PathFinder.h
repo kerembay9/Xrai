@@ -108,7 +108,7 @@ struct RRT_Star_PathFinder {
   double p_forwardStep=.5;
   double p_sideStep=.0;
   double p_backwardStep=.0;
-
+  uint foundPath = -1;
   //counters
   uint iters=0;
   uint n_backStep=0, n_backStepGood=0, n_sideStep=0, n_sideStepGood=0, n_forwardStep=0, n_forwardStepGood=0, n_rndStep=0, n_rndStepGood=0;

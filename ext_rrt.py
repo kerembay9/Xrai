@@ -7,6 +7,7 @@ rrt = ry.PathFinder()
 rrt.helloworld()
 
 # Create a new configuration
+# Create a new configuration
 C = ry.Config()
 
 C.addFile("/home/monke/Xrai/maze.g")
@@ -34,7 +35,7 @@ q0 = [0.2, 0.2, 0.4]
 qT = C.getFrame('goal1').getPosition()
 
 ry.params_clear()
-ry.params_add({'rrt/stepsize':.4, 'rrt/verbose': 0,'rrt/maxIters':30}) #verbose=3 makes it very slow, and displays result, and verbose=4 waits keypress..
+ry.params_add({'rrt/stepsize':.1, 'rrt/verbose': 0,'rrt/maxIters':500}) #verbose=3 makes it very slow, and displays result, and verbose=4 waits keypress..
 
 rrt = ry.PathFinder()
 rrt.setProblem(C, [q0], [qT])
