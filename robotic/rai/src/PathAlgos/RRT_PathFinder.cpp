@@ -742,12 +742,12 @@ void RRT_Star_PathFinder::planForward(const arr& q0, const arr& qT) {
 }
 
 int RRT_Star_PathFinder::stepConnect() {
-  std::cout << "entered stepConnect" << std::endl;
+  // std::cout << "entered stepConnect" << std::endl;
   iters++;
   if(iters>(uint)maxIters) return foundPath; //-1
 
   bool success = growTreeToTree(*rrt0, *rrtT);
-  std::cout << "success line 1: " << success << std::endl;
+  // std::cout << "success line 1: " << success << std::endl;
   if(!success) success = growTreeToTree(*rrtT, *rrt0);
 
 
@@ -802,7 +802,7 @@ int RRT_Star_PathFinder::stepConnect() {
     }
     std::cout << "viable path found" << std::endl;
     foundPath = 1;
-    return 0; //1
+    return 1; //1 //0 to continue normally
   }
 
   return 0;
@@ -812,6 +812,7 @@ arr RRT_Star_PathFinder::planConnect() {
   std::cout << "entered planConnect" << std::endl;
   int r=0;
   while(!r) { r = stepConnect(); }
+  if(r==1) { std::cout <<"done and now I will add stuff";}
   if(r==-1) path.clear();
   return path;
 }

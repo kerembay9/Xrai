@@ -1,5 +1,6 @@
 import robotic as ry
 import time
+import json
 ry.params_clear()
 ry.params_add({'rrt/stepsize':.1, 'rrt/verbose': 3}) #verbose=3 makes it very slow, and displays result, and verbose=4 waits keypress..
 
@@ -35,18 +36,21 @@ q0 = [0.2, 0.2, 0.4]
 qT = C.getFrame('goal1').getPosition()
 
 ry.params_clear()
-ry.params_add({'rrt/stepsize':.1, 'rrt/verbose': 0,'rrt/maxIters':500}) #verbose=3 makes it very slow, and displays result, and verbose=4 waits keypress..
+ry.params_add({'rrt/stepsize':.2, 'rrt/verbose': 0,'rrt/maxIters':60}) #verbose=3 makes it very slow, and displays result, and verbose=4 waits keypress..
 
 rrt = ry.PathFinder()
 rrt.setProblem(C, [q0], [qT])
 ret = rrt.star_solve()
 print(ret)
 path = ret.x
-
-# Visualize the solution path
-if ret.feasible:
-    for i in range(len(path)):
-        C.addFrame(f"path_{i}").setPosition(path[i]).setShape(ry.ST.sphere, [0.02])  # Add a sphere at each path point
-        C.view()
-else:
-    print("No valid path found.")
+print(path)
+with open('path_data.json', 'w') as f:
+    json.dump(path.tolist(), f)  # Convert numpy array to list for JSON serialization
+print("Path saved to 'path_data.json'.")
+# # Visualize the solution path
+# if ret.feasible:
+#     for i in range(len(path)):
+#         C.addFrame(f"path_{i}").setPosition(path[i]).setShape(ry.ST.sphere, [0.02])  # Add a sphere at each path point
+#         C.view()
+# else:
+#     print("No valid path found.")
