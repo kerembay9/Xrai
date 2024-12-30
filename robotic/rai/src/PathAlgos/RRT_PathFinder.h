@@ -99,6 +99,7 @@ struct RRT_Star_PathFinder {
   ConfigurationProblem& P;
   shared_ptr<RRT_SingleTree> rrt0;
   shared_ptr<RRT_SingleTree> rrtT;
+  shared_ptr<RRT_SingleTree> rrtTcopy;
 
   //parameters
   double stepsize;
@@ -127,6 +128,84 @@ struct RRT_Star_PathFinder {
   bool growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& rrt_B);
 
   arr run(double timeBudget=1.); //obsolete
+  void mergeTrees();
+  void revertNodes();
+ private:
+  rai::Configuration DISP;
+};
+
+///algorithms
+struct Single_RRT_Star_PathFinder {
+  ConfigurationProblem& P;
+  shared_ptr<RRT_SingleTree> rrt0;
+  shared_ptr<RRT_SingleTree> rrtT;
+
+  //parameters
+  double stepsize;
+  int maxIters=5000;
+  int verbose;
+  int subsampleChecks=0;
+  double p_forwardStep=.5;
+  double p_sideStep=.0;
+  double p_backwardStep=.0;
+  uint foundPath = -1;
+  //counters
+  uint iters=0;
+  uint n_backStep=0, n_backStepGood=0, n_sideStep=0, n_sideStepGood=0, n_forwardStep=0, n_forwardStepGood=0, n_rndStep=0, n_rndStepGood=0;
+
+  //output
+  arr path;
+
+  Single_RRT_Star_PathFinder(ConfigurationProblem& _P, const arr& starts, const arr& goals, double _stepsize = -1., int _subsampleChecks=-1, int maxIters=-1, int _verbose=-1);
+  ~Single_RRT_Star_PathFinder() {}
+
+  int stepConnect();
+  void planForward(const arr& q0, const arr& qT);
+  arr planConnect(); //default numbers: equivalent to standard bidirect
+
+  bool growTreeTowardsRandom(RRT_SingleTree& rrt);
+  bool growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& rrt_B);
+
+  arr run(double timeBudget=1.); //obsolete
+
+ private:
+  rai::Configuration DISP;
+};
+
+
+///algorithms
+struct PSBI_RRT_PathFinder {
+  ConfigurationProblem& P;
+  shared_ptr<RRT_SingleTree> rrt0;
+  shared_ptr<RRT_SingleTree> rrtT;
+
+  //parameters
+  double stepsize;
+  int maxIters=5000;
+  int verbose;
+  int subsampleChecks=0;
+  double p_forwardStep=.5;
+  double p_sideStep=.0;
+  double p_backwardStep=.0;
+  uint foundPath = -1;
+  //counters
+  uint iters=0;
+  uint n_backStep=0, n_backStepGood=0, n_sideStep=0, n_sideStepGood=0, n_forwardStep=0, n_forwardStepGood=0, n_rndStep=0, n_rndStepGood=0;
+
+  //output
+  arr path;
+
+  PSBI_RRT_PathFinder(ConfigurationProblem& _P, const arr& starts, const arr& goals, double _stepsize = -1., int _subsampleChecks=-1, int maxIters=-1, int _verbose=-1);
+  ~PSBI_RRT_PathFinder() {}
+
+  int stepConnect();
+  void planForward(const arr& q0, const arr& qT);
+  arr planConnect(); //default numbers: equivalent to standard bidirect
+
+  bool growTreeTowardsRandom(RRT_SingleTree& rrt);
+  bool growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& rrt_B);
+
+  arr run(double timeBudget=1.); //obsolete
 
  private:
   rai::Configuration DISP;
@@ -140,8 +219,12 @@ struct PathFinder : NonCopyable {
   std::shared_ptr<ConfigurationProblem> problem;
   std::shared_ptr<RRT_PathFinder> rrtSolver;
   std::shared_ptr<RRT_Star_PathFinder> rrtStarSolver;
+  std::shared_ptr<Single_RRT_Star_PathFinder> singlerrtStarSolver;
+  std::shared_ptr<PSBI_RRT_PathFinder> psbirrtSolver;
   std::shared_ptr<SolverReturn> ret;
   std::shared_ptr<SolverReturn> star_ret;
+  std::shared_ptr<SolverReturn> single_star_ret;
+  std::shared_ptr<SolverReturn> psbi_ret;
 
   void setProblem(const rai::Configuration& C, const arr& starts, const arr& goals, double collisionTolerance=-1.);
 
@@ -151,6 +234,8 @@ struct PathFinder : NonCopyable {
 
   shared_ptr<SolverReturn> solve();
   shared_ptr<SolverReturn> star_solve();
+  shared_ptr<SolverReturn> single_star_solve();
+  shared_ptr<SolverReturn> psbi_solve();
 
   arr get_resampledPath(uint T);
 };
