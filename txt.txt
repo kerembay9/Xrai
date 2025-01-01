@@ -1,0 +1,5 @@
+Average Results after 100 iterations:
+RRT - Average Path Length: 0, Average Evaluations: 0, Successful Paths: 0
+PSBI - Average Path Length: 8.898768236870902, Average Evaluations: 45207.93, Successful Paths: 100
+Star - Average Path Length: 0, Average Evaluations: 0, Successful Paths: 0
+Single Star - Average Path Length: 0, Average Evaluations: 0, Successful Paths: 0

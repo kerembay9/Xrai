@@ -1,6 +1,6 @@
 frame floorwalls: { }
 
-frame _0(floorwalls): { shape: box, size: [10, 10, 0.01], color: [0.4, 0.4, 0.4], Q: [0, 0, +0.02, 1, 0, 0, 0]  ,contact: True}
+frame _0(floorwalls): { shape: box, size: [10, 10, 0.01], color: [0.4, 0.4, 0.4], Q: [0, 0, +0.02, 1, 0, 0, 0]  ,contact: 0}
 front _1(floorwalls): { shape: box, size: [6, 0.02, 1.2], color: [0.82, 0.7, 0.55], Q: [2, -4, 0.62, 1, 0, 0, 0] ,contact: True}
 front _2(floorwalls): { shape: box, size: [2, 0.02, 1.2], color: [0.82, 0.7, 0.55], Q: [2, -2, 0.62, 1, 0, 0, 0] ,contact: True}
 front _3(floorwalls): { shape: box, size: [2, 0.02, 1.2], color: [0.82, 0.7, 0.55], Q: [-4, -2, 0.62, 1, 0, 0, 0] ,contact: True}

@@ -469,7 +469,6 @@ shared_ptr<SolverReturn> PathFinder::solve() {
   ret->x = rrtSolver->path;
   ret->evals = rrtSolver->iters;
 
-  std::cout << "normal solve completed!" << std::endl;
   return ret;
 }
 
@@ -484,7 +483,6 @@ shared_ptr<SolverReturn> PathFinder::star_solve() {
   star_ret->feasible = rrtStarSolver->path.N; //(r==1);
   star_ret->x = rrtStarSolver->path;
   star_ret->evals = rrtStarSolver->iters;
-  std::cout << "Star solve completed!" << std::endl;
   return star_ret;
 }
 
@@ -499,7 +497,6 @@ shared_ptr<SolverReturn> PathFinder::single_star_solve() {
   single_star_ret->feasible = singlerrtStarSolver->path.N; //(r==1);
   single_star_ret->x = singlerrtStarSolver->path;
   single_star_ret->evals = singlerrtStarSolver->iters;
-  std::cout << "Single Star solve completed!" << std::endl;
   return single_star_ret;
 }
 
@@ -514,7 +511,6 @@ shared_ptr<SolverReturn> PathFinder::psbi_solve() {
   psbi_ret->feasible = psbirrtSolver->path.N; //(r==1);
   psbi_ret->x = psbirrtSolver->path;
   psbi_ret->evals = psbirrtSolver->iters;
-  std::cout << "Star solve completed!" << std::endl;
   return psbi_ret;
 }
 
@@ -526,7 +522,6 @@ arr PathFinder::get_resampledPath(uint T){ return path_resampleLinear(ret->x, T)
 ////////////////////////////////////////////////////////
 
 bool RRT_Star_PathFinder::growTreeTowardsRandom(RRT_SingleTree& rrt) {
-  std::cout << "entered growTreeTowardsRandom" << std::endl;
   const arr start = rrt.ann.X[0]; // Starting point, first node in the tree
   arr t(rrt.getDim()); // t is the target, dimension matches the tree's dimension
   rndUniform(t, -RAI_2PI, RAI_2PI, false); // Uniform random target within bounds
@@ -650,7 +645,6 @@ RRT_Star_PathFinder::RRT_Star_PathFinder(ConfigurationProblem& _P, const arr& _s
     verbose(_verbose),
     subsampleChecks(_subsampleChecks) {
 
-  std::cout << "entered RRT_Star_PathFinder" << std::endl;
   if(stepsize<0.) stepsize = rai::getParameter<double>("rrt/stepsize", .1);
   if(subsampleChecks<0) subsampleChecks = rai::getParameter<int>("rrt/subsamples", 4);
   if(maxIters<0) maxIters = rai::getParameter<int>("rrt/maxIters", 5000);
@@ -775,7 +769,6 @@ int RRT_Star_PathFinder::stepConnect() {
 arr RRT_Star_PathFinder::planConnect() {
   int r=0;
   while(!r) { r = stepConnect(); }
-  if(r==1) { std::cout <<"done and now I will add stuff"<<std::endl;}
   if(r==-1) path.clear();
   return path;
 }
@@ -887,7 +880,7 @@ void RRT_Star_PathFinder::mergeTrees() {
 ////////////////////////////////////////////////////////
 
 bool Single_RRT_Star_PathFinder::growTreeTowardsRandom(RRT_SingleTree& rrt) {
-  std::cout << "entered growTreeTowardsRandom" << std::endl;
+
   const arr start = rrt.ann.X[0]; // Starting point, first node in the tree
   arr t(rrt.getDim()); // t is the target, dimension matches the tree's dimension
   rndUniform(t, -RAI_2PI, RAI_2PI, false); // Uniform random target within bounds
@@ -1037,7 +1030,6 @@ Single_RRT_Star_PathFinder::Single_RRT_Star_PathFinder(ConfigurationProblem& _P,
     verbose(_verbose),
     subsampleChecks(_subsampleChecks) {
 
-  std::cout << "entered Single_RRT_Star_PathFinder" << std::endl;
   if(stepsize<0.) stepsize = rai::getParameter<double>("rrt/stepsize", .1);
   if(subsampleChecks<0) subsampleChecks = rai::getParameter<int>("rrt/subsamples", 4);
   if(maxIters<0) maxIters = rai::getParameter<int>("rrt/maxIters", 5000);
@@ -1131,7 +1123,6 @@ int Single_RRT_Star_PathFinder::stepConnect() {
 arr Single_RRT_Star_PathFinder::planConnect() {
   int r=0;
   while(!r) { r = stepConnect(); }
-  if(r==1) { std::cout <<"done and now I will add stuff"<<std::endl;}
   if(r==-1) path.clear();
   return path;
 }
@@ -1361,7 +1352,6 @@ arr thetaCut(const arr& path, double theta_threshold) {
   }
 
   optimized_path.append(path[path.d0 - 1]); // Add the ending node
-  std::cout << "optimized_path 0: " << optimized_path[0] << std::endl;
   return optimized_path;
 }
 
