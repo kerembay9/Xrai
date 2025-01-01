@@ -632,7 +632,6 @@ bool RRT_Star_PathFinder::growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& 
       double newPathCost = rrt_A.getCost(newNodeID) + length(neighborNode - newNode);
       double currentPathCost = rrt_A.getCost(neighborID);
       if (newPathCost < currentPathCost) {
-        std::cout << "parent changed " << std:: endl;
         rrt_A.changeParent(neighborID, newNodeID, newPathCost);
       }
     }
@@ -1146,69 +1145,85 @@ arr Single_RRT_Star_PathFinder::run(double timeBudget) {
 ////////////////////////////////////////////////////////
 
 bool PSBI_RRT_PathFinder::growTreeTowardsRandom(RRT_SingleTree& rrt) {
-  std::cout << "entered growTreeTowardsRandom" << std::endl;
-  const arr start = rrt.ann.X[0]; // Starting point, first node in the tree
-  arr t(rrt.getDim()); // t is the target, dimension matches the tree's dimension
-  rndUniform(t, -RAI_2PI, RAI_2PI, false); // Uniform random target within bounds
+  const arr start = rrt.ann.X[0];
+  arr t(rrt.getNode(0).N);
+  rndUniform(t, -RAI_2PI, RAI_2PI, false);
+  HALT("DON'T USE 2PI")
 
-  arr q = rrt.getProposalTowards(t, stepsize); // Propose new node toward target
+  arr q = rrt.getProposalTowards(t, stepsize);
 
-  auto qr = P.query(q); // Query if the new point is feasible
-  if (qr->isFeasible) {
-    if (subsampleChecks > 0 && !checkConnection(P, start, q, subsampleChecks, true)) {
-      return false; // Connection check failed
+  auto qr = P.query(q);
+  if(qr->isFeasible) {
+    if(subsampleChecks>0 && !checkConnection(P, start, q, subsampleChecks, true)) {
+      return false;
     }
 
-    uint parentID = rrt.nearestID; // Nearest node's index
-    rrt.add(q, parentID, qr); // Add new node to the tree
-
-    // Rewiring: search for neighbors and potentially rewire them
-    double radius = stepsize; // Set a rewiring radius
-    arr neighbors = rrt.getNeighbors(q, radius); // Get neighbors of the new node
-    for (uint i = 0; i < neighbors.N; ++i) {
-      uint neighborID = neighbors(i);
-      arr neighborNode = rrt.getNode(neighborID);
-
-      // Recompute the cost and check if rewiring is beneficial
-      double currentCost = rrt.getNearest(q) + length(neighborNode - q); // Use length instead of distance
-      if (currentCost < rrt.getNearest(neighborNode) + length(neighborNode - q)) {
-        // If rewiring improves the path, update the parent
-        rrt.add(q, neighborID, qr);
-      }
-    }
+    rrt.add(q, rrt.nearestID, qr);
     return true;
   }
   return false;
 }
 
+
 bool PSBI_RRT_PathFinder::growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& rrt_B) {
   bool isSideStep, isForwardStep;
   //decide on a target: forward or random
   arr t;
-  // std::cout << "entered growTreeToTree" << std::endl;
-  if(rnd.uni()<p_forwardStep) {
-    t = rrt_B.getRandomNode();
+  arr q_start = rrt_A.getNode(0); // Start point of the tree
+  arr q_goal = rrt_B.getNode(0);
+  arr q_center = 0.5 * (q_start + q_goal);
+  //TODO: Check validity of elliptical sampling + dual bias, then implement heuristic search
+  // error at upper part 
+
+if(rnd.uni() < p_forwardStep) {
+    t = q_center;
     isForwardStep = true;
-  } else {
-    t.resize(rrt_A.getNode(0).N);
-    for(uint i=0; i<t.N; i++) {
-      double lo=P.limits(0, i), up=P.limits(1, i);
-      CHECK_GE(up-lo, 1e-3, "limits are null interval: " <<i <<' ' <<P.C.getJointNames());
-      t.elem(i) = lo + rnd.uni()*(up-lo);
+} else {    
+    // Compute the ellipse parameters
+    arr q_center = 0.5 * (q_start + q_goal); // Ellipse center
+    double c_min = length(q_goal - q_start); // Euclidean distance between start and goal
+    // To define an ellipse we need two foci + semi minor or major axes, so I defined it to be c_min  1.2
+    // authors did not specify how to create the ellipse
+    double c_best = c_min * 1.2;
+
+    CHECK_GE(c_best, c_min, "Invalid ellipse parameters: c_best < c_min");
+
+    double semi_major_axis = c_best / 2.0;
+    double semi_minor_axis = sqrt(c_best * c_best - c_min * c_min) / 2.0;
+
+    // Generate a random point within a unit circle
+    double theta = rnd.uni() * 2.0 * M_PI; // Random angle
+    double r = sqrt(rnd.uni());            // Random radius for uniform sampling
+    double x_unit = r * cos(theta);        // x-coordinate in unit circle
+    double y_unit = r * sin(theta);        // y-coordinate in unit circle
+
+    // Scale the point to the ellipse and shift to its center
+    arr q_ellipse(q_start.N);
+    q_ellipse(0) = q_center(0) + semi_major_axis * x_unit;
+    q_ellipse(1) = q_center(1) + semi_minor_axis * y_unit;
+
+    // Ensure bounds are respected for other dimensions
+    for(uint i = 2; i < q_ellipse.N; i++) {
+        double lo = P.limits(0, i), up = P.limits(1, i);
+        CHECK_GE(up - lo, 1e-3, "limits are null interval: " << i << ' ' << P.C.getJointNames());
+        q_ellipse.elem(i) = lo + rnd.uni() * (up - lo);
     }
-    isForwardStep = false;
+
+      t = q_ellipse; // Use the sampled point in the ellipse
+      isForwardStep = false;
   }
 
-  //sample configuration towards target, possibly sideStepping
+  // Sample configuration towards the target, possibly side-stepping
   arr q = rrt_A.getNewSample(t, stepsize, p_sideStep, isSideStep, 0);
   uint parentID = rrt_A.nearestID;
 
-  //special rule: if parent is already in collision, isFeasible = smaller collisions
+  // Special rule: if parent is already in collision, isFeasible = smaller collisions
   shared_ptr<QueryResult>& pr = rrt_A.queries(parentID);
   double org_collisionTolerance = P.collisionTolerance;
-  if(pr->totalCollision>P.collisionTolerance) P.collisionTolerance = pr->totalCollision + 1e-6;
+  if(pr->totalCollision > P.collisionTolerance) 
+      P.collisionTolerance = pr->totalCollision + 1e-6;
 
-  //evaluate the sample
+  // Evaluate the sample
   auto qr = P.query(q);
   if(isForwardStep) {  n_forwardStep++; if(qr->isFeasible) n_forwardStepGood++; }
   if(!isForwardStep) {  n_rndStep++; if(qr->isFeasible) n_rndStepGood++; }
@@ -1232,62 +1247,16 @@ bool PSBI_RRT_PathFinder::growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& 
   P.collisionTolerance = org_collisionTolerance;
 
   //finally adding the new node to the tree
-  double radius = stepsize;
-  if (qr->isFeasible) {
-  uint newNodeID = rrt_A.add(q, parentID, qr); // Add the new node with its initial parent
-  arr newNode = rrt_A.getNode(newNodeID);
-  // std::cout << "adding " << newNodeID << std::endl;
-  arr neighbors = rrt_A.getNeighbors(q, radius); // Get neighbors within the specified radius
-  // std::cout << "neighbors are " << neighbors << std::endl;
-  // find the parent from neighbors
-  for (uint i = 0; i < neighbors.N; ++i) {
-    uint neighborID = neighbors(i);
-    arr neighborNode = rrt_A.getNode(neighborID);
-    // std::cout << "neighborID " << neighborID << " neighborNode " << neighborNode << std::endl;
-    if (parentID == neighborID) {
-      // std::cout << "Invalid parentID: " << parentID << std::endl;
-    } else {
-      // arr parent = rrt_A.getNode(parentID);
-      // std::cout << "parentID: " << parentID << std::endl;
-    //   // Compute the cost of the current path and the potential rewired path
-      double newPathCost = rrt_A.getCost(neighborID) + length(neighborNode - newNode);
-      double currentPathCost = rrt_A.getCost(newNodeID);
-      // std::cout << "newPathCost is " << newPathCost << "currentPathCost is " << currentPathCost << std::endl;
-      if (newPathCost < currentPathCost) {
-        // std::cout << "found shorter path" << std::endl;
-        // Rewire the neighbor if the new path is better
-        rrt_A.changeParent(newNodeID, neighborID, newPathCost);
-      }
-    }
+  if(qr->isFeasible){
+    rrt_A.add(q, parentID, qr);
+    double dist = rrt_B.getNearest(q);
+    if(subsampleChecks>0) { if(dist<stepsize/subsampleChecks) return true; }
+    else { if(dist<stepsize) return true; }
   }
-  // if possible, update neighbors' parents to new node
-  for (uint i = 0; i < neighbors.N; ++i) {
-    uint neighborID = neighbors(i);
-    arr neighborNode = rrt_A.getNode(neighborID);
-    // std::cout << "neighborID " << neighborID << " neighborNode " << neighborNode << std::endl;
-    if (parentID == neighborID) {
-      // std::cout << "Invalid parentID: " << parentID << std::endl;
-    } else {
-      // arr parent = rrt_A.getNode(parentID);
-      // std::cout << "parentID: " << parentID << std::endl;
-    //   // Compute the cost of the current path and the potential rewired path
-      double newPathCost = rrt_A.getCost(newNodeID) + length(neighborNode - newNode);
-      double currentPathCost = rrt_A.getCost(neighborID);
-      // std::cout << "newPathCost is " << newPathCost << "currentPathCost is " << currentPathCost << std::endl;
-      if (newPathCost < currentPathCost) {
-        // std::cout << "found shorter path" << std::endl;
-        // Rewire the neighbor if the new path is better
-        rrt_A.changeParent(neighborID, newNodeID, newPathCost);
-      }
-    }
-  }
-  double dist = rrt_B.getNearest(q);
-  // std::cout << "dist: " << dist << " stepsize/subsampleChecks: " << stepsize/subsampleChecks << std::endl;
-  if(subsampleChecks>0) { if(dist<stepsize/subsampleChecks) return true; }
-  else { if(dist<stepsize) return true; }
-  }
+
   return false;
 }
+
 
 PSBI_RRT_PathFinder::PSBI_RRT_PathFinder(ConfigurationProblem& _P, const arr& _starts, const arr& _goals, double _stepsize, int _subsampleChecks, int _maxIters, int _verbose)
   : P(_P),
@@ -1296,7 +1265,6 @@ PSBI_RRT_PathFinder::PSBI_RRT_PathFinder(ConfigurationProblem& _P, const arr& _s
     verbose(_verbose),
     subsampleChecks(_subsampleChecks) {
 
-  std::cout << "entered PSBI_RRT_PathFinder" << std::endl;
   if(stepsize<0.) stepsize = rai::getParameter<double>("rrt/stepsize", .1);
   if(subsampleChecks<0) subsampleChecks = rai::getParameter<int>("rrt/subsamples", 4);
   if(maxIters<0) maxIters = rai::getParameter<int>("rrt/maxIters", 5000);
@@ -1317,7 +1285,6 @@ PSBI_RRT_PathFinder::PSBI_RRT_PathFinder(ConfigurationProblem& _P, const arr& _s
 }
 
 void PSBI_RRT_PathFinder::planForward(const arr& q0, const arr& qT) {
-  // std::cout << "entered planForward" << std::endl;
   bool success=false;
 
   for(uint i=0; i<100000; i++) {
@@ -1327,7 +1294,7 @@ void PSBI_RRT_PathFinder::planForward(const arr& q0, const arr& qT) {
     if(added) {
       if(length(rrt0->getLast() - qT)<stepsize) success = true;
     }
-    // if(success) {std::cout <<"success" <<std::endl;}//break;
+    if(success) break;
 
     //some output
     if(verbose>2) {
@@ -1366,28 +1333,76 @@ void PSBI_RRT_PathFinder::planForward(const arr& q0, const arr& qT) {
 
   path >>FILE("z.path");
 }
+arr thetaCut(const arr& path, double theta_threshold) {
+  if(path.d0 < 3) return path; // No optimization possible for fewer than 3 nodes
+
+  arr optimized_path;
+  optimized_path.append(path[0]); // Add the starting node
+  optimized_path.reshape(-1, path[0].d0);
+  for(uint i = 1; i < path.d0 - 1; ++i) {
+    arr Q_prev = path[i - 1];
+    arr Q_curr = path[i];
+    arr Q_next = path[i + 1];
+
+    // Compute vectors
+    arr vec1 = Q_curr - Q_prev;
+    arr vec2 = Q_next - Q_curr;
+
+    // Compute the angle between vec1 and vec2
+    double dot_product = scalarProduct(vec1, vec2);
+    double norm1 = length(vec1);
+    double norm2 = length(vec2);
+    double theta = acos(dot_product / (norm1 * norm2));
+
+    // Retain the current node if the angle exceeds the threshold
+    if(theta > theta_threshold) {
+      optimized_path.append(Q_curr);
+    }
+  }
+
+  optimized_path.append(path[path.d0 - 1]); // Add the ending node
+  std::cout << "optimized_path 0: " << optimized_path[0] << std::endl;
+  return optimized_path;
+}
 
 int PSBI_RRT_PathFinder::stepConnect() {
   iters++;
-  if(iters>(uint)maxIters) return foundPath; //-1
+  if(iters>(uint)maxIters) return -1;
 
   bool success = growTreeToTree(*rrt0, *rrtT);
+  if(!success) success = growTreeToTree(*rrtT, *rrt0);
+
+  //animation display
+  if(verbose>2) {
+    if(!(iters%100)) {
+      DISP.setJointState(rrt0->getLast());
+      DISP.view(verbose>4, STRING("planConnect evals " <<P.evals));
+    }
+  }
+  if(verbose>1) {
+    if(!(iters%100)) {
+      std::cout <<"RRT queries=" <<P.evals <<" tree sizes = " <<rrt0->getNumberNodes()  <<' ' <<rrtT->getNumberNodes() <<std::endl;
+    }
+  }
+
+  //-- the rest is only on success -> extract the path, display, etc
 
   if(success) {
-    p_forwardStep = 0.0;
-    std::cout << "execution completed" << std::endl;
     if(verbose>0) {
       std::cout <<"  -- rrt success:";
       std::cout <<" queries:" <<P.evals <<" tree sizes: " <<rrt0->getNumberNodes()  <<' ' <<rrtT->getNumberNodes() <<std::endl;
     }
-    std::cout << "before path" << std::endl;
+
     path = rrt0->getPathFromNode(rrt0->nearestID);
-    std::cout << "after path" << std::endl;
     arr pathT = rrtT->getPathFromNode(rrtT->nearestID);
-    std::cout << "after pathT" << std::endl;
 
     revertPath(path);
     path.append(pathT);
+
+    // Theta cut mechanism
+    double theta_threshold = M_PI / 4; // Set threshold angle (45 degrees)
+    path = thetaCut(path, theta_threshold);
+
 
     //display
     if(verbose>1) {
@@ -1403,26 +1418,23 @@ int PSBI_RRT_PathFinder::stepConnect() {
         DISP.clear();
       }
     }
-    std::cout << "viable path found" << std::endl;
-    foundPath = 1;
-    return 0; //1 //0 to continue normally
+
+    return 1;
   }
 
   return 0;
 }
 
 arr PSBI_RRT_PathFinder::planConnect() {
-  std::cout << "entered planConnect" << std::endl;
   int r=0;
   while(!r) { r = stepConnect(); }
-  if(r==1) { std::cout <<"done and now I will add stuff"<<std::endl;}
   if(r==-1) path.clear();
   return path;
 }
 
 arr PSBI_RRT_PathFinder::run(double timeBudget) {
-  std::cout << "entered run" << std::endl;
   planConnect();
   return path;
 }
+
 
